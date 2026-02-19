@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import CSVUploader from './CSVUploader'
 import ReviewSession from './ReviewSession'
+import CardManager from './CardManager'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell,
@@ -11,13 +12,12 @@ import {
     Brain, LogOut, PlayCircle, Upload, Clock, Zap, Shield,
     Gauge, X, Pencil, TrendingUp, BookOpen, AlertTriangle,
 } from 'lucide-react'
-import { addDays, format, startOfDay, isSameDay, isBefore } from 'date-fns'
+import { addDays, format, startOfDay } from 'date-fns'
 
 // ─────────────────────────────────────────
 // Mock data generator for design preview
 // ─────────────────────────────────────────
 function generateMockCards(count = 120) {
-    const states = [0, 1, 2, 3] // New, Learning, Review, Relearning
     const stateWeights = [0.15, 0.2, 0.55, 0.1]
     const now = new Date()
     const cards = []
@@ -33,7 +33,7 @@ function generateMockCards(count = 120) {
 
         const stability = state === 0 ? 0 : Math.round((Math.random() * 60 + 1) * 10) / 10
         const difficulty = Math.round((Math.random() * 9 + 1) * 10) / 10
-        const dueOffset = Math.floor(Math.random() * 21) - 3 // -3 to +17 days
+        const dueOffset = Math.floor(Math.random() * 21) - 3
         const due = addDays(now, dueOffset)
 
         cards.push({
@@ -55,7 +55,7 @@ function generateMockCards(count = 120) {
 
 const STATE_LABELS = { 0: 'New', 1: 'Learning', 2: 'Review', 3: 'Relearning' }
 const PIE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444']
-const USE_MOCK = false // Set to true to preview design with mock data
+const USE_MOCK = false
 
 // ─────────────────────────────────────────
 // Dashboard
@@ -139,6 +139,14 @@ export default function Dashboard() {
         )
     }
 
+    if (view === 'cards') {
+        return (
+            <Layout user={user} signOut={signOut}>
+                <CardManager onBack={() => { setView('home'); fetchCards() }} />
+            </Layout>
+        )
+    }
+
     if (view === 'upload') {
         return (
             <Layout user={user} signOut={signOut}>
@@ -175,6 +183,13 @@ export default function Dashboard() {
                         >
                             <PlayCircle className="w-4 h-4" />
                             Review ({dueToday})
+                        </button>
+                        <button
+                            onClick={() => setView('cards')}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white text-sm font-medium rounded-xl hover:bg-white/10 transition-all"
+                        >
+                            <BookOpen className="w-4 h-4" />
+                            Cards
                         </button>
                         <button
                             onClick={() => setView('upload')}
@@ -295,7 +310,7 @@ export default function Dashboard() {
                                             dataKey="value"
                                             stroke="none"
                                         >
-                                            {stateDistribution.map((entry, idx) => (
+                                            {stateDistribution.map((entry) => (
                                                 <Cell
                                                     key={entry.name}
                                                     fill={PIE_COLORS[
