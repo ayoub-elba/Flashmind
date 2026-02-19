@@ -22,15 +22,18 @@ export default function ProjectSelector() {
 
     // Close dropdown on outside click
     useEffect(() => {
+        if (!open) return
         const handler = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
                 setOpen(false)
                 setShowCreate(false)
+                setNewName('')
             }
         }
-        document.addEventListener('mousedown', handler)
-        return () => document.removeEventListener('mousedown', handler)
-    }, [])
+        // Use click instead of mousedown to avoid race conditions
+        document.addEventListener('click', handler, true)
+        return () => document.removeEventListener('click', handler, true)
+    }, [open])
 
     useEffect(() => {
         if (showCreate && inputRef.current) {
@@ -47,6 +50,7 @@ export default function ProjectSelector() {
             setNewName('')
             setSelectedColor(PROJECT_COLORS[0])
             setShowCreate(false)
+            setOpen(false)
         }
         setCreating(false)
     }
@@ -69,7 +73,14 @@ export default function ProjectSelector() {
         <div className="relative" ref={dropdownRef}>
             {/* Trigger button */}
             <button
-                onClick={() => setOpen(!open)}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    setOpen(!open)
+                    if (open) {
+                        setShowCreate(false)
+                        setNewName('')
+                    }
+                }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm"
             >
                 <span
@@ -84,17 +95,21 @@ export default function ProjectSelector() {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl shadow-black/40 z-50 overflow-hidden">
+                <div
+                    className="absolute top-full left-0 mt-2 w-72 bg-slate-800 border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-50"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     {/* Project list */}
                     <div className="max-h-64 overflow-y-auto py-1">
                         {projects.map((project) => (
-                            <button
+                            <div
                                 key={project.id}
                                 onClick={() => {
                                     setActiveProject(project)
                                     setOpen(false)
+                                    setShowCreate(false)
                                 }}
-                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${project.id === activeProject.id
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors group ${project.id === activeProject.id
                                         ? 'bg-indigo-500/10 text-white'
                                         : 'text-slate-300 hover:bg-white/5 hover:text-white'
                                     }`}
@@ -121,12 +136,12 @@ export default function ProjectSelector() {
                                         )}
                                     </button>
                                 )}
-                            </button>
+                            </div>
                         ))}
                     </div>
 
                     {/* Divider */}
-                    <div className="border-t border-white/5" />
+                    <div className="border-t border-white/10" />
 
                     {/* Create new project */}
                     {showCreate ? (
@@ -139,7 +154,10 @@ export default function ProjectSelector() {
                                 onChange={(e) => setNewName(e.target.value)}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleCreate()
-                                    if (e.key === 'Escape') setShowCreate(false)
+                                    if (e.key === 'Escape') {
+                                        setShowCreate(false)
+                                        setNewName('')
+                                    }
                                 }}
                                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors"
                             />
@@ -159,8 +177,11 @@ export default function ProjectSelector() {
                             </div>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => setShowCreate(false)}
-                                    className="flex-1 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+                                    onClick={() => {
+                                        setShowCreate(false)
+                                        setNewName('')
+                                    }}
+                                    className="flex-1 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -177,7 +198,7 @@ export default function ProjectSelector() {
                     ) : (
                         <button
                             onClick={() => setShowCreate(true)}
-                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-400 hover:bg-white/5 transition-colors"
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-400 hover:bg-white/5 transition-colors rounded-b-xl"
                         >
                             <Plus className="w-4 h-4" />
                             New Project
