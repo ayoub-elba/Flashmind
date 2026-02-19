@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { createEmptyCard, cardToDbRow } from '../lib/fsrs'
-import { Search, Trash2, ArrowLeft, Loader2, Plus, X, Check } from 'lucide-react'
+import { Search, Trash2, ArrowLeft, Loader2, Plus, X, Check, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function CardManager({ onBack }) {
@@ -16,6 +16,12 @@ export default function CardManager({ onBack }) {
     const [newAnswer, setNewAnswer] = useState('')
     const [adding, setAdding] = useState(false)
     const questionRef = useRef(null)
+
+    // Per-card inline editing
+    const [editingId, setEditingId] = useState(null)
+    const [editQuestion, setEditQuestion] = useState('')
+    const [editAnswer, setEditAnswer] = useState('')
+    const [saving, setSaving] = useState(false)
 
     useEffect(() => {
         fetchCards()
@@ -82,6 +88,40 @@ export default function CardManager({ onBack }) {
             alert('Failed to add card')
         }
         setAdding(false)
+    }
+
+    const handleStartEdit = (card) => {
+        setEditingId(card.id)
+        setEditQuestion(card.question)
+        setEditAnswer(card.answer)
+    }
+
+    const handleCancelEdit = () => {
+        setEditingId(null)
+        setEditQuestion('')
+        setEditAnswer('')
+    }
+
+    const handleSaveEdit = async () => {
+        if (!editQuestion.trim() || !editAnswer.trim()) return
+        setSaving(true)
+
+        const { error } = await supabase
+            .from('flashcards')
+            .update({ question: editQuestion.trim(), answer: editAnswer.trim() })
+            .eq('id', editingId)
+
+        if (!error) {
+            setCards(cards.map((c) =>
+                c.id === editingId
+                    ? { ...c, question: editQuestion.trim(), answer: editAnswer.trim() }
+                    : c
+            ))
+            handleCancelEdit()
+        } else {
+            alert('Failed to save card')
+        }
+        setSaving(false)
     }
 
     const filteredCards = cards.filter((card) => {
@@ -192,33 +232,84 @@ export default function CardManager({ onBack }) {
                             <div className="col-span-5">Answer</div>
                             <div className="col-span-2 text-right">Actions</div>
                         </div>
-                        {filteredCards.map((card) => (
-                            <div key={card.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-white/[0.02] transition-colors group">
-                                <div className="col-span-5 pr-4">
-                                    <p className="text-sm text-white font-medium line-clamp-2">{card.question}</p>
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        Created {format(new Date(card.created_at || new Date()), 'MMM d, yyyy')}
-                                    </p>
+                        {filteredCards.map((card) =>
+                            editingId === card.id ? (
+                                <div key={card.id} className="px-6 py-4 bg-indigo-500/5">
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Question</label>
+                                                <textarea
+                                                    value={editQuestion}
+                                                    onChange={(e) => setEditQuestion(e.target.value)}
+                                                    rows={3}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors resize-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Answer</label>
+                                                <textarea
+                                                    value={editAnswer}
+                                                    onChange={(e) => setEditAnswer(e.target.value)}
+                                                    rows={3}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors resize-none"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={handleCancelEdit}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+                                            >
+                                                <X className="w-3 h-3" />
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleSaveEdit}
+                                                disabled={saving || !editQuestion.trim() || !editAnswer.trim()}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                                {saving ? 'Saving...' : 'Save'}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="col-span-5 pr-4">
-                                    <p className="text-sm text-slate-300 line-clamp-2">{card.answer}</p>
+                            ) : (
+                                <div key={card.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-white/[0.02] transition-colors group">
+                                    <div className="col-span-5 pr-4">
+                                        <p className="text-sm text-white font-medium line-clamp-2">{card.question}</p>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Created {format(new Date(card.created_at || new Date()), 'MMM d, yyyy')}
+                                        </p>
+                                    </div>
+                                    <div className="col-span-5 pr-4">
+                                        <p className="text-sm text-slate-300 line-clamp-2">{card.answer}</p>
+                                    </div>
+                                    <div className="col-span-2 flex justify-end gap-1">
+                                        <button
+                                            onClick={() => handleStartEdit(card)}
+                                            className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            title="Edit card"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(card.id)}
+                                            disabled={deletingId === card.id}
+                                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            title="Delete card"
+                                        >
+                                            {deletingId === card.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="col-span-2 flex justify-end">
-                                    <button
-                                        onClick={() => handleDelete(card.id)}
-                                        disabled={deletingId === card.id}
-                                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                        title="Delete card"
-                                    >
-                                        {deletingId === card.id ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="w-4 h-4" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            )
+                        )}
                     </div>
                 )}
             </div>
