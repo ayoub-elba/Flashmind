@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
-import { f, Rating, dbRowToCard, cardToDbRow } from '../lib/fsrs'
+import { createFSRS, Rating, dbRowToCard, cardToDbRow, getUserSettings } from '../lib/fsrs'
 import Flashcard from './Flashcard'
 import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Frown, Meh, Smile, Laugh, Trash2 } from 'lucide-react'
 
@@ -21,6 +21,7 @@ export default function ReviewSession({ onBack }) {
         if (!activeProject) return
         setLoading(true)
         const now = new Date().toISOString()
+        const settings = getUserSettings()
 
         const { data, error } = await supabase
             .from('flashcards')
@@ -31,8 +32,10 @@ export default function ReviewSession({ onBack }) {
             .order('due', { ascending: true })
 
         if (!error && data) {
-            setCards(data)
-            setSessionStats((s) => ({ ...s, total: data.length }))
+            // Apply daily limit if set
+            const limited = settings.dailyLimit > 0 ? data.slice(0, settings.dailyLimit) : data
+            setCards(limited)
+            setSessionStats((s) => ({ ...s, total: limited.length }))
         }
         setLoading(false)
     }, [user.id, activeProject?.id])
@@ -46,7 +49,9 @@ export default function ReviewSession({ onBack }) {
         if (cards.length > 0 && currentIndex < cards.length) {
             const card = cards[currentIndex]
             const fsrsCard = dbRowToCard(card)
-            const result = f.repeat(fsrsCard, new Date())
+            const settings = getUserSettings()
+            const fsrs = createFSRS(settings.retentionRate)
+            const result = fsrs.repeat(fsrsCard, new Date())
             setScheduling(result)
         } else {
             setScheduling(null)

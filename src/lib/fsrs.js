@@ -1,13 +1,46 @@
 import { FSRS, Rating, State, createEmptyCard, generatorParameters } from 'ts-fsrs'
 
-const params = generatorParameters({ enable_fuzz: true })
-export const f = new FSRS(params)
+// Default retention rate
+const DEFAULT_RETENTION = 0.9
+
+/**
+ * Create an FSRS instance with configurable retention rate.
+ */
+export function createFSRS(retention = DEFAULT_RETENTION) {
+    const params = generatorParameters({
+        enable_fuzz: true,
+        request_retention: retention,
+    })
+    return new FSRS(params)
+}
+
+// Default instance (used when no custom retention is needed)
+export const f = createFSRS()
 export { Rating, State, createEmptyCard }
 
 /**
+ * Get user settings from localStorage
+ */
+export function getUserSettings() {
+    try {
+        const stored = localStorage.getItem('flashmind_settings')
+        if (stored) return JSON.parse(stored)
+    } catch { }
+    return {
+        retentionRate: DEFAULT_RETENTION,
+        dailyLimit: 0, // 0 = unlimited
+    }
+}
+
+/**
+ * Save user settings to localStorage
+ */
+export function saveUserSettings(settings) {
+    localStorage.setItem('flashmind_settings', JSON.stringify(settings))
+}
+
+/**
  * Convert a DB row into a ts-fsrs Card object.
- * Dates stored as ISO strings in Supabase need to be
- * converted back to Date objects.
  */
 export function dbRowToCard(row) {
     return {
