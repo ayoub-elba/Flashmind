@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabaseClient'
 import { LogIn, UserPlus, Loader2, Brain } from 'lucide-react'
 
 export default function Auth() {
@@ -26,6 +27,26 @@ export default function Auth() {
                 text: 'Check your email to confirm your account!',
                 type: 'success',
             })
+        }
+        setLoading(false)
+    }
+
+    const handleForgotPassword = async () => {
+        if (!email.trim()) {
+            setMessage({ text: 'Please enter your email address first.', type: 'error' })
+            return
+        }
+        setLoading(true)
+        setMessage({ text: '', type: '' })
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+            redirectTo: window.location.origin,
+        })
+
+        if (error) {
+            setMessage({ text: error.message, type: 'error' })
+        } else {
+            setMessage({ text: 'Password reset email sent! Check your inbox.', type: 'success' })
         }
         setLoading(false)
     }
@@ -84,11 +105,24 @@ export default function Auth() {
                             />
                         </div>
 
+                        {isLogin && (
+                            <div className="text-right -mt-2">
+                                <button
+                                    type="button"
+                                    onClick={handleForgotPassword}
+                                    disabled={loading}
+                                    className="text-xs text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50"
+                                >
+                                    Forgot password?
+                                </button>
+                            </div>
+                        )}
+
                         {message.text && (
                             <div
                                 className={`p-3 rounded-xl text-sm ${message.type === 'error'
-                                        ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                                        : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                    ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                                    : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
                                     }`}
                             >
                                 {message.text}

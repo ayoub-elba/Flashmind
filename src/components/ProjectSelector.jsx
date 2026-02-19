@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useProject, PROJECT_COLORS } from '../contexts/ProjectContext'
-import { ChevronDown, Plus, Check, Trash2, Loader2 } from 'lucide-react'
+import { ChevronDown, Plus, Check, Trash2, Loader2, Pencil } from 'lucide-react'
 
 export default function ProjectSelector() {
     const {
@@ -9,6 +9,7 @@ export default function ProjectSelector() {
         setActiveProject,
         createProject,
         deleteProject,
+        renameProject,
     } = useProject()
 
     const [open, setOpen] = useState(false)
@@ -16,7 +17,13 @@ export default function ProjectSelector() {
     const [newName, setNewName] = useState('')
     const [selectedColor, setSelectedColor] = useState(PROJECT_COLORS[0])
     const [creating, setCreating] = useState(false)
+    // Rename state
+    const [renamingId, setRenamingId] = useState(null)
+    const [renameValue, setRenameValue] = useState('')
+    const [savingRename, setSavingRename] = useState(false)
+
     const inputRef = useRef(null)
+    const renameInputRef = useRef(null)
 
     useEffect(() => {
         if (showCreate && inputRef.current) {
@@ -24,10 +31,19 @@ export default function ProjectSelector() {
         }
     }, [showCreate])
 
+    useEffect(() => {
+        if (renamingId && renameInputRef.current) {
+            renameInputRef.current.focus()
+            renameInputRef.current.select()
+        }
+    }, [renamingId])
+
     const closeAll = () => {
         setOpen(false)
         setShowCreate(false)
         setNewName('')
+        setRenamingId(null)
+        setRenameValue('')
     }
 
     const handleCreate = async () => {
@@ -44,6 +60,27 @@ export default function ProjectSelector() {
         setCreating(false)
     }
 
+    const handleStartRename = (e, project) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setRenamingId(project.id)
+        setRenameValue(project.name)
+    }
+
+    const handleSaveRename = async () => {
+        if (!renameValue.trim() || !renamingId) return
+        setSavingRename(true)
+        await renameProject(renamingId, renameValue.trim())
+        setRenamingId(null)
+        setRenameValue('')
+        setSavingRename(false)
+    }
+
+    const handleCancelRename = () => {
+        setRenamingId(null)
+        setRenameValue('')
+    }
+
     const handleDelete = (e, projectId) => {
         e.preventDefault()
         e.stopPropagation()
@@ -51,9 +88,7 @@ export default function ProjectSelector() {
             alert('You need at least one project.')
             return
         }
-        // Close dropdown first so it doesn't interfere with the dialog
         closeAll()
-        // Show confirm after DOM has settled
         setTimeout(async () => {
             if (!window.confirm('Delete this project and ALL its cards?')) return
             await deleteProject(projectId)
@@ -94,39 +129,78 @@ export default function ProjectSelector() {
                 >
                     {/* Project list */}
                     <div className="max-h-64 overflow-y-auto py-1">
-                        {projects.map((project) => (
-                            <div
-                                key={project.id}
-                                onClick={() => {
-                                    setActiveProject(project)
-                                    closeAll()
-                                }}
-                                className={`w-full flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors group ${project.id === activeProject.id
-                                    ? 'bg-indigo-500/10 text-white'
-                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                                    }`}
-                            >
-                                <span
-                                    className="w-3 h-3 rounded-full flex-shrink-0"
-                                    style={{ backgroundColor: project.color }}
-                                />
-                                <span className="flex-1 text-sm font-medium truncate">
-                                    {project.name}
-                                </span>
-                                {project.id === activeProject.id && (
-                                    <Check className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                                )}
-                                {projects.length > 1 && (
+                        {projects.map((project) =>
+                            renamingId === project.id ? (
+                                /* Inline rename form */
+                                <div key={project.id} className="px-3 py-2 flex items-center gap-2">
+                                    <span
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: project.color }}
+                                    />
+                                    <input
+                                        ref={renameInputRef}
+                                        type="text"
+                                        value={renameValue}
+                                        onChange={(e) => setRenameValue(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSaveRename()
+                                            if (e.key === 'Escape') handleCancelRename()
+                                        }}
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveRename}
+                                        disabled={savingRename || !renameValue.trim()}
+                                        className="p-1 text-emerald-400 hover:text-emerald-300 disabled:opacity-40"
+                                    >
+                                        {savingRename ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                    </button>
+                                </div>
+                            ) : (
+                                /* Normal project row */
+                                <div
+                                    key={project.id}
+                                    onClick={() => {
+                                        setActiveProject(project)
+                                        closeAll()
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors group ${project.id === activeProject.id
+                                            ? 'bg-indigo-500/10 text-white'
+                                            : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                >
+                                    <span
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: project.color }}
+                                    />
+                                    <span className="flex-1 text-sm font-medium truncate">
+                                        {project.name}
+                                    </span>
+                                    {project.id === activeProject.id && (
+                                        <Check className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                                    )}
+                                    {/* Rename button */}
                                     <span
                                         role="button"
-                                        onClick={(e) => handleDelete(e, project.id)}
-                                        className="p-1 text-slate-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 cursor-pointer"
+                                        onClick={(e) => handleStartRename(e, project)}
+                                        className="p-1 text-slate-500 hover:text-indigo-400 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 cursor-pointer"
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Pencil className="w-3.5 h-3.5" />
                                     </span>
-                                )}
-                            </div>
-                        ))}
+                                    {/* Delete button */}
+                                    {projects.length > 1 && (
+                                        <span
+                                            role="button"
+                                            onClick={(e) => handleDelete(e, project.id)}
+                                            className="p-1 text-slate-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 cursor-pointer"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </span>
+                                    )}
+                                </div>
+                            )
+                        )}
                     </div>
 
                     {/* Divider */}
@@ -157,8 +231,8 @@ export default function ProjectSelector() {
                                         type="button"
                                         onClick={() => setSelectedColor(color)}
                                         className={`w-6 h-6 rounded-full transition-all ${selectedColor === color
-                                            ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110'
-                                            : 'hover:scale-110'
+                                                ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110'
+                                                : 'hover:scale-110'
                                             }`}
                                         style={{ backgroundColor: color }}
                                     />

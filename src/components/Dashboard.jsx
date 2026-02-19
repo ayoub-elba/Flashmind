@@ -6,6 +6,7 @@ import CSVUploader from './CSVUploader'
 import ReviewSession from './ReviewSession'
 import CardManager from './CardManager'
 import ProjectSelector from './ProjectSelector'
+import Settings from './Settings'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell,
@@ -13,7 +14,7 @@ import {
 import {
     Brain, LogOut, PlayCircle, Upload, Clock, Zap, Shield,
     Gauge, X, Pencil, TrendingUp, BookOpen, AlertTriangle,
-    Check, Loader2,
+    Check, Loader2, Settings as SettingsIcon,
 } from 'lucide-react'
 import { addDays, format, startOfDay } from 'date-fns'
 
@@ -179,7 +180,7 @@ export default function Dashboard() {
     // ── Subviews ──
     if (view === 'review') {
         return (
-            <Layout user={user} signOut={signOut}>
+            <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
                 <ReviewSession onBack={() => { setView('home'); fetchCards() }} />
             </Layout>
         )
@@ -187,7 +188,7 @@ export default function Dashboard() {
 
     if (view === 'cards') {
         return (
-            <Layout user={user} signOut={signOut}>
+            <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
                 <CardManager onBack={() => { setView('home'); fetchCards() }} />
             </Layout>
         )
@@ -195,7 +196,7 @@ export default function Dashboard() {
 
     if (view === 'upload') {
         return (
-            <Layout user={user} signOut={signOut}>
+            <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
                 <div className="max-w-xl mx-auto">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-bold text-white">Import Cards</h2>
@@ -209,9 +210,17 @@ export default function Dashboard() {
         )
     }
 
+    if (view === 'settings') {
+        return (
+            <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
+                <Settings onBack={() => setView('home')} />
+            </Layout>
+        )
+    }
+
     // ── Main Dashboard ──
     return (
-        <Layout user={user} signOut={signOut}>
+        <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
             <div className="max-w-6xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -582,7 +591,7 @@ function StateBadge({ state }) {
     )
 }
 
-function Layout({ children, user, signOut }) {
+function Layout({ children, user, signOut, onSettings }) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
             {/* Background blurs */}
@@ -601,10 +610,17 @@ function Layout({ children, user, signOut }) {
                         <h1 className="text-lg font-bold text-white tracking-tight">FlashMind</h1>
                         <ProjectSelector />
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <span className="text-sm text-slate-400 hidden sm:block">
                             {user.email}
                         </span>
+                        <button
+                            onClick={onSettings}
+                            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-all"
+                            title="Settings"
+                        >
+                            <SettingsIcon className="w-4 h-4" />
+                        </button>
                         <button
                             onClick={signOut}
                             className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-all"
