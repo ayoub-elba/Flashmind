@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useProject, PROJECT_COLORS } from '../contexts/ProjectContext'
-import { ChevronDown, Plus, X, Check, Trash2, Loader2 } from 'lucide-react'
+import { ChevronDown, Plus, Check, Trash2, Loader2 } from 'lucide-react'
 
 export default function ProjectSelector() {
     const {
@@ -16,7 +16,6 @@ export default function ProjectSelector() {
     const [newName, setNewName] = useState('')
     const [selectedColor, setSelectedColor] = useState(PROJECT_COLORS[0])
     const [creating, setCreating] = useState(false)
-    const [deletingId, setDeletingId] = useState(null)
     const inputRef = useRef(null)
 
     useEffect(() => {
@@ -25,47 +24,52 @@ export default function ProjectSelector() {
         }
     }, [showCreate])
 
+    const closeAll = () => {
+        setOpen(false)
+        setShowCreate(false)
+        setNewName('')
+    }
+
     const handleCreate = async () => {
         if (!newName.trim()) return
         setCreating(true)
         const project = await createProject(newName.trim(), selectedColor)
         if (project) {
             setActiveProject(project)
-            setNewName('')
-            setSelectedColor(PROJECT_COLORS[0])
-            setShowCreate(false)
-            setOpen(false)
         }
+        setNewName('')
+        setSelectedColor(PROJECT_COLORS[0])
+        setShowCreate(false)
+        setOpen(false)
         setCreating(false)
     }
 
-    const handleDelete = async (e, projectId) => {
+    const handleDelete = (e, projectId) => {
+        e.preventDefault()
         e.stopPropagation()
         if (projects.length <= 1) {
             alert('You need at least one project.')
             return
         }
-        if (!confirm('Delete this project and ALL its cards?')) return
-        setDeletingId(projectId)
-        await deleteProject(projectId)
-        setDeletingId(null)
-    }
-
-    const closeDropdown = () => {
-        setOpen(false)
-        setShowCreate(false)
-        setNewName('')
+        // Close dropdown first so it doesn't interfere with the dialog
+        closeAll()
+        // Show confirm after DOM has settled
+        setTimeout(async () => {
+            if (!window.confirm('Delete this project and ALL its cards?')) return
+            await deleteProject(projectId)
+        }, 200)
     }
 
     if (!activeProject) return null
 
     return (
         <div className="relative">
-            {/* Trigger button */}
+            {/* Trigger */}
             <button
+                type="button"
                 onClick={() => {
                     if (open) {
-                        closeDropdown()
+                        closeAll()
                     } else {
                         setOpen(true)
                     }
@@ -82,17 +86,12 @@ export default function ProjectSelector() {
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Backdrop — closes dropdown on click outside */}
-            {open && (
-                <div
-                    className="fixed inset-0 z-40"
-                    onClick={closeDropdown}
-                />
-            )}
-
             {/* Dropdown */}
             {open && (
-                <div className="absolute top-full left-0 mt-2 w-72 bg-slate-800 border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-50">
+                <div
+                    className="absolute top-full left-0 mt-2 w-72 bg-slate-800 border border-white/10 rounded-xl shadow-2xl shadow-black/50"
+                    style={{ zIndex: 9999 }}
+                >
                     {/* Project list */}
                     <div className="max-h-64 overflow-y-auto py-1">
                         {projects.map((project) => (
@@ -100,11 +99,11 @@ export default function ProjectSelector() {
                                 key={project.id}
                                 onClick={() => {
                                     setActiveProject(project)
-                                    closeDropdown()
+                                    closeAll()
                                 }}
                                 className={`w-full flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors group ${project.id === activeProject.id
-                                        ? 'bg-indigo-500/10 text-white'
-                                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-indigo-500/10 text-white'
+                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
                                     }`}
                             >
                                 <span
@@ -118,16 +117,13 @@ export default function ProjectSelector() {
                                     <Check className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
                                 )}
                                 {projects.length > 1 && (
-                                    <button
+                                    <span
+                                        role="button"
                                         onClick={(e) => handleDelete(e, project.id)}
-                                        className="p-1 text-slate-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                                        className="p-1 text-slate-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 cursor-pointer"
                                     >
-                                        {deletingId === project.id ? (
-                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        )}
-                                    </button>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </span>
                                 )}
                             </div>
                         ))}
@@ -136,7 +132,7 @@ export default function ProjectSelector() {
                     {/* Divider */}
                     <div className="border-t border-white/10" />
 
-                    {/* Create new project */}
+                    {/* Create form OR button */}
                     {showCreate ? (
                         <div className="p-3 space-y-3">
                             <input
@@ -154,15 +150,15 @@ export default function ProjectSelector() {
                                 }}
                                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors"
                             />
-                            {/* Color picker */}
                             <div className="flex flex-wrap gap-1.5">
                                 {PROJECT_COLORS.map((color) => (
                                     <button
                                         key={color}
+                                        type="button"
                                         onClick={() => setSelectedColor(color)}
                                         className={`w-6 h-6 rounded-full transition-all ${selectedColor === color
-                                                ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110'
-                                                : 'hover:scale-110'
+                                            ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110'
+                                            : 'hover:scale-110'
                                             }`}
                                         style={{ backgroundColor: color }}
                                     />
@@ -170,6 +166,7 @@ export default function ProjectSelector() {
                             </div>
                             <div className="flex gap-2">
                                 <button
+                                    type="button"
                                     onClick={() => {
                                         setShowCreate(false)
                                         setNewName('')
@@ -179,6 +176,7 @@ export default function ProjectSelector() {
                                     Cancel
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={handleCreate}
                                     disabled={creating || !newName.trim()}
                                     className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
@@ -190,6 +188,7 @@ export default function ProjectSelector() {
                         </div>
                     ) : (
                         <button
+                            type="button"
                             onClick={() => setShowCreate(true)}
                             className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-400 hover:bg-white/5 transition-colors rounded-b-xl"
                         >

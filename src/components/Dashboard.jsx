@@ -592,7 +592,7 @@ function Layout({ children, user, signOut }) {
             </div>
 
             {/* Nav */}
-            <nav className="relative z-10 border-b border-white/5 bg-white/5 backdrop-blur-xl">
+            <nav className="relative z-30 border-b border-white/5 bg-white/5 backdrop-blur-xl">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
