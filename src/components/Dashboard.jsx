@@ -11,6 +11,7 @@ import {
 import {
     Brain, LogOut, PlayCircle, Upload, Clock, Zap, Shield,
     Gauge, X, Pencil, TrendingUp, BookOpen, AlertTriangle,
+    Check, Loader2,
 } from 'lucide-react'
 import { addDays, format, startOfDay } from 'date-fns'
 
@@ -66,6 +67,12 @@ export default function Dashboard() {
     const [view, setView] = useState('home')
     const [loading, setLoading] = useState(true)
 
+    // Per-card inline editing for leeches
+    const [editingLeechId, setEditingLeechId] = useState(null)
+    const [editQuestion, setEditQuestion] = useState('')
+    const [editAnswer, setEditAnswer] = useState('')
+    const [savingLeech, setSavingLeech] = useState(false)
+
     const fetchCards = async () => {
         setLoading(true)
         if (USE_MOCK) {
@@ -80,6 +87,40 @@ export default function Dashboard() {
 
         if (data) setCards(data)
         setLoading(false)
+    }
+
+    const handleStartEditLeech = (card) => {
+        setEditingLeechId(card.id)
+        setEditQuestion(card.question)
+        setEditAnswer(card.answer)
+    }
+
+    const handleCancelEditLeech = () => {
+        setEditingLeechId(null)
+        setEditQuestion('')
+        setEditAnswer('')
+    }
+
+    const handleSaveLeech = async () => {
+        if (!editQuestion.trim() || !editAnswer.trim()) return
+        setSavingLeech(true)
+
+        const { error } = await supabase
+            .from('flashcards')
+            .update({ question: editQuestion.trim(), answer: editAnswer.trim() })
+            .eq('id', editingLeechId)
+
+        if (!error) {
+            setCards(cards.map((c) =>
+                c.id === editingLeechId
+                    ? { ...c, question: editQuestion.trim(), answer: editAnswer.trim() }
+                    : c
+            ))
+            handleCancelEditLeech()
+        } else {
+            alert('Failed to save card')
+        }
+        setSavingLeech(false)
     }
 
     useEffect(() => {
@@ -371,33 +412,77 @@ export default function Dashboard() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {leeches.map((card) => (
-                                        <tr key={card.id} className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="px-4 py-3 text-white max-w-[300px] truncate">
-                                                {card.question}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <DifficultyBadge value={card.difficulty} />
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-slate-300">
-                                                {card.stability ? `${Math.round(card.stability)}d` : '—'}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <StateBadge state={card.state} />
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => {
-                                                        setView('review')
-                                                    }}
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg transition-colors"
-                                                >
-                                                    <Pencil className="w-3 h-3" />
-                                                    Edit
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {leeches.map((card) =>
+                                        editingLeechId === card.id ? (
+                                            <tr key={card.id} className="bg-indigo-500/5">
+                                                <td colSpan={5} className="px-4 py-4">
+                                                    <div className="space-y-3">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Question</label>
+                                                                <textarea
+                                                                    value={editQuestion}
+                                                                    onChange={(e) => setEditQuestion(e.target.value)}
+                                                                    rows={2}
+                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors resize-none"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Answer</label>
+                                                                <textarea
+                                                                    value={editAnswer}
+                                                                    onChange={(e) => setEditAnswer(e.target.value)}
+                                                                    rows={2}
+                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors resize-none"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={handleCancelEditLeech}
+                                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                onClick={handleSaveLeech}
+                                                                disabled={savingLeech || !editQuestion.trim() || !editAnswer.trim()}
+                                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            >
+                                                                {savingLeech ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                                                {savingLeech ? 'Saving...' : 'Save'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            <tr key={card.id} className="hover:bg-white/[0.02] transition-colors">
+                                                <td className="px-4 py-3 text-white max-w-[300px] truncate">
+                                                    {card.question}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <DifficultyBadge value={card.difficulty} />
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-slate-300">
+                                                    {card.stability ? `${Math.round(card.stability)}d` : '—'}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <StateBadge state={card.state} />
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button
+                                                        onClick={() => handleStartEditLeech(card)}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg transition-colors"
+                                                    >
+                                                        <Pencil className="w-3 h-3" />
+                                                        Edit
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    )}
                                 </tbody>
                             </table>
                         </div>
