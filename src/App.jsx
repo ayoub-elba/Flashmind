@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ProjectProvider } from './contexts/ProjectContext'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import { Loader2 } from 'lucide-react'
@@ -14,7 +15,11 @@ function AppContent() {
     )
   }
 
-  return user ? <Dashboard /> : <Auth />
+  return user ? (
+    <ProjectProvider>
+      <Dashboard />
+    </ProjectProvider>
+  ) : <Auth />
 }
 
 function App() {

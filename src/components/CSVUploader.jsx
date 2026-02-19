@@ -5,7 +5,7 @@ import { createEmptyCard, cardToDbRow } from '../lib/fsrs'
 import Papa from 'papaparse'
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react'
 
-export default function CSVUploader({ onUploadComplete }) {
+export default function CSVUploader({ projectId, onUploadComplete }) {
     const { user } = useAuth()
     const [dragActive, setDragActive] = useState(false)
     const [file, setFile] = useState(null)
@@ -112,6 +112,7 @@ export default function CSVUploader({ onUploadComplete }) {
 
         const cards = result.data.map((row) => ({
             user_id: user.id,
+            project_id: projectId,
             question: row.question.trim(),
             answer: row.answer.trim(),
             ...fsrsFields,

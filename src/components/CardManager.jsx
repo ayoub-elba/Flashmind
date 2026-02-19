@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { createEmptyCard, cardToDbRow } from '../lib/fsrs'
 import { Search, Trash2, ArrowLeft, Loader2, Plus, X, Check, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function CardManager({ onBack }) {
     const { user } = useAuth()
+    const { activeProject } = useProject()
     const [cards, setCards] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -34,11 +36,13 @@ export default function CardManager({ onBack }) {
     }, [showAddForm])
 
     const fetchCards = async () => {
+        if (!activeProject) return
         setLoading(true)
         const { data } = await supabase
             .from('flashcards')
             .select('*')
             .eq('user_id', user.id)
+            .eq('project_id', activeProject.id)
             .order('created_at', { ascending: false })
 
         if (data) setCards(data)
@@ -73,6 +77,7 @@ export default function CardManager({ onBack }) {
             .from('flashcards')
             .insert({
                 user_id: user.id,
+                project_id: activeProject.id,
                 question: newQuestion.trim(),
                 answer: newAnswer.trim(),
                 ...fsrsFields,

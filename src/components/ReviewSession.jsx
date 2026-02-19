@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { f, Rating, dbRowToCard, cardToDbRow } from '../lib/fsrs'
 import Flashcard from './Flashcard'
 import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Frown, Meh, Smile, Laugh, Trash2 } from 'lucide-react'
 
 export default function ReviewSession({ onBack }) {
     const { user } = useAuth()
+    const { activeProject } = useProject()
     const [cards, setCards] = useState([])
     const [currentIndex, setCurrentIndex] = useState(0)
     const [flipped, setFlipped] = useState(false)
@@ -16,6 +18,7 @@ export default function ReviewSession({ onBack }) {
     const [scheduling, setScheduling] = useState(null)
 
     const fetchDueCards = useCallback(async () => {
+        if (!activeProject) return
         setLoading(true)
         const now = new Date().toISOString()
 
@@ -23,6 +26,7 @@ export default function ReviewSession({ onBack }) {
             .from('flashcards')
             .select('*')
             .eq('user_id', user.id)
+            .eq('project_id', activeProject.id)
             .lte('due', now)
             .order('due', { ascending: true })
 
@@ -31,7 +35,7 @@ export default function ReviewSession({ onBack }) {
             setSessionStats((s) => ({ ...s, total: data.length }))
         }
         setLoading(false)
-    }, [user.id])
+    }, [user.id, activeProject?.id])
 
     useEffect(() => {
         fetchDueCards()

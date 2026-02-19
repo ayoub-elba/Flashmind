@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import CSVUploader from './CSVUploader'
 import ReviewSession from './ReviewSession'
 import CardManager from './CardManager'
+import ProjectSelector from './ProjectSelector'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell,
@@ -63,6 +65,7 @@ const USE_MOCK = false
 // ─────────────────────────────────────────
 export default function Dashboard() {
     const { user, signOut } = useAuth()
+    const { activeProject, loading: projectLoading } = useProject()
     const [cards, setCards] = useState([])
     const [view, setView] = useState('home')
     const [loading, setLoading] = useState(true)
@@ -74,6 +77,7 @@ export default function Dashboard() {
     const [savingLeech, setSavingLeech] = useState(false)
 
     const fetchCards = async () => {
+        if (!activeProject) return
         setLoading(true)
         if (USE_MOCK) {
             setCards(generateMockCards(120))
@@ -84,6 +88,7 @@ export default function Dashboard() {
             .from('flashcards')
             .select('*')
             .eq('user_id', user.id)
+            .eq('project_id', activeProject.id)
 
         if (data) setCards(data)
         setLoading(false)
@@ -125,7 +130,7 @@ export default function Dashboard() {
 
     useEffect(() => {
         fetchCards()
-    }, [user.id])
+    }, [user.id, activeProject?.id])
 
     // ── Derived stats ──
     const now = new Date()
@@ -198,7 +203,7 @@ export default function Dashboard() {
                             <X className="w-5 h-5" />
                         </button>
                     </div>
-                    <CSVUploader onUploadComplete={() => fetchCards()} />
+                    <CSVUploader projectId={activeProject?.id} onUploadComplete={() => fetchCards()} />
                 </div>
             </Layout>
         )
@@ -594,6 +599,7 @@ function Layout({ children, user, signOut }) {
                             <Brain className="w-4 h-4 text-white" />
                         </div>
                         <h1 className="text-lg font-bold text-white tracking-tight">FlashMind</h1>
+                        <ProjectSelector />
                     </div>
                     <div className="flex items-center gap-4">
                         <span className="text-sm text-slate-400 hidden sm:block">
