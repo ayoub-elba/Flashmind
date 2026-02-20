@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import { createEmptyCard, cardToDbRow } from '../lib/fsrs'
-import { Search, Trash2, ArrowLeft, Loader2, Plus, X, Check, Pencil } from 'lucide-react'
+import ImageSearchModal from './ImageSearchModal'
+import { Search, Trash2, ArrowLeft, Loader2, Plus, X, Check, Pencil, ImageIcon } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function CardManager({ onBack }) {
@@ -17,12 +18,16 @@ export default function CardManager({ onBack }) {
     const [newQuestion, setNewQuestion] = useState('')
     const [newAnswer, setNewAnswer] = useState('')
     const [adding, setAdding] = useState(false)
+    const [newImageUrl, setNewImageUrl] = useState('')
+    const [showImageSearch, setShowImageSearch] = useState(false)
+    const [imageSearchContext, setImageSearchContext] = useState('') // 'add' or 'edit'
     const questionRef = useRef(null)
 
     // Per-card inline editing
     const [editingId, setEditingId] = useState(null)
     const [editQuestion, setEditQuestion] = useState('')
     const [editAnswer, setEditAnswer] = useState('')
+    const [editImageUrl, setEditImageUrl] = useState('')
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
@@ -80,6 +85,7 @@ export default function CardManager({ onBack }) {
                 project_id: activeProject.id,
                 question: newQuestion.trim(),
                 answer: newAnswer.trim(),
+                image_url: newImageUrl || null,
                 ...fsrsFields,
             })
             .select()
@@ -88,6 +94,7 @@ export default function CardManager({ onBack }) {
             setCards([data[0], ...cards])
             setNewQuestion('')
             setNewAnswer('')
+            setNewImageUrl('')
             setShowAddForm(false)
         } else {
             alert('Failed to add card')
@@ -99,12 +106,14 @@ export default function CardManager({ onBack }) {
         setEditingId(card.id)
         setEditQuestion(card.question)
         setEditAnswer(card.answer)
+        setEditImageUrl(card.image_url || '')
     }
 
     const handleCancelEdit = () => {
         setEditingId(null)
         setEditQuestion('')
         setEditAnswer('')
+        setEditImageUrl('')
     }
 
     const handleSaveEdit = async () => {
@@ -113,13 +122,17 @@ export default function CardManager({ onBack }) {
 
         const { error } = await supabase
             .from('flashcards')
-            .update({ question: editQuestion.trim(), answer: editAnswer.trim() })
+            .update({
+                question: editQuestion.trim(),
+                answer: editAnswer.trim(),
+                image_url: editImageUrl || null,
+            })
             .eq('id', editingId)
 
         if (!error) {
             setCards(cards.map((c) =>
                 c.id === editingId
-                    ? { ...c, question: editQuestion.trim(), answer: editAnswer.trim() }
+                    ? { ...c, question: editQuestion.trim(), answer: editAnswer.trim(), image_url: editImageUrl || null }
                     : c
             ))
             handleCancelEdit()
@@ -190,6 +203,30 @@ export default function CardManager({ onBack }) {
                             />
                         </div>
                     </div>
+
+                    {/* Image Section */}
+                    <div>
+                        {newImageUrl ? (
+                            <div className="relative inline-block">
+                                <img src={newImageUrl} alt="" className="h-20 rounded-lg object-cover" />
+                                <button
+                                    onClick={() => setNewImageUrl('')}
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => { setImageSearchContext('add'); setShowImageSearch(true) }}
+                                className="flex items-center gap-2 px-3 py-2 text-xs text-slate-400 hover:text-indigo-400 bg-white/5 border border-white/10 hover:border-indigo-500/30 rounded-lg transition-all"
+                            >
+                                <ImageIcon className="w-3.5 h-3.5" />
+                                Add Image
+                            </button>
+                        )}
+                    </div>
+
                     <div className="flex justify-end">
                         <button
                             onClick={handleAddCard}
@@ -261,6 +298,28 @@ export default function CardManager({ onBack }) {
                                                 />
                                             </div>
                                         </div>
+                                        {/* Image in edit */}
+                                        <div>
+                                            {editImageUrl ? (
+                                                <div className="relative inline-block">
+                                                    <img src={editImageUrl} alt="" className="h-16 rounded-lg object-cover" />
+                                                    <button
+                                                        onClick={() => setEditImageUrl('')}
+                                                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => { setImageSearchContext('edit'); setShowImageSearch(true) }}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-400 hover:text-indigo-400 bg-white/5 border border-white/10 hover:border-indigo-500/30 rounded-lg transition-all"
+                                                >
+                                                    <ImageIcon className="w-3 h-3" />
+                                                    Add Image
+                                                </button>
+                                            )}
+                                        </div>
                                         <div className="flex justify-end gap-2">
                                             <button
                                                 onClick={handleCancelEdit}
@@ -282,11 +341,16 @@ export default function CardManager({ onBack }) {
                                 </div>
                             ) : (
                                 <div key={card.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-white/[0.02] transition-colors group">
-                                    <div className="col-span-5 pr-4">
-                                        <p className="text-sm text-white font-medium line-clamp-2">{card.question}</p>
-                                        <p className="text-xs text-slate-500 mt-1">
-                                            Created {format(new Date(card.created_at || new Date()), 'MMM d, yyyy')}
-                                        </p>
+                                    <div className="col-span-5 pr-4 flex items-center gap-3">
+                                        {card.image_url && (
+                                            <img src={card.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                                        )}
+                                        <div>
+                                            <p className="text-sm text-white font-medium line-clamp-2">{card.question}</p>
+                                            <p className="text-xs text-slate-500 mt-1">
+                                                Created {format(new Date(card.created_at || new Date()), 'MMM d, yyyy')}
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="col-span-5 pr-4">
                                         <p className="text-sm text-slate-300 line-clamp-2">{card.answer}</p>
@@ -318,6 +382,22 @@ export default function CardManager({ onBack }) {
                     </div>
                 )}
             </div>
+
+            {/* Image Search Modal */}
+            {showImageSearch && (
+                <ImageSearchModal
+                    initialQuery={imageSearchContext === 'add' ? newQuestion : editQuestion}
+                    onSelect={(url) => {
+                        if (imageSearchContext === 'add') {
+                            setNewImageUrl(url)
+                        } else {
+                            setEditImageUrl(url)
+                        }
+                        setShowImageSearch(false)
+                    }}
+                    onClose={() => setShowImageSearch(false)}
+                />
+            )}
         </div>
     )
 }

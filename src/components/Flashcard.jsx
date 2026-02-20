@@ -103,14 +103,14 @@ export default function Flashcard({ card, flipped, onFlip, onSave, onSpeak, spea
                     }`}
             >
                 {/* Front */}
-                <div className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-sm p-8 flex flex-col items-center justify-center">
+                <div className={`absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-sm flex flex-col items-center justify-center ${card.image_url ? 'p-4' : 'p-8'}`}>
                     {/* Top buttons */}
                     <div className="absolute top-3 right-3 flex items-center gap-1">
                         <button
                             onClick={(e) => handleSpeak(e, card.question)}
                             className={`p-1.5 transition-colors ${speaking
-                                    ? 'text-indigo-400 animate-pulse'
-                                    : 'text-slate-500 hover:text-indigo-400'
+                                ? 'text-indigo-400 animate-pulse'
+                                : 'text-slate-500 hover:text-indigo-400'
                                 }`}
                             title="Read aloud"
                         >
@@ -124,10 +124,17 @@ export default function Flashcard({ card, flipped, onFlip, onSave, onSpeak, spea
                             <Pencil className="w-3.5 h-3.5" />
                         </button>
                     </div>
-                    <span className="text-xs font-medium text-indigo-400 uppercase tracking-widest mb-4">
+                    <span className="text-xs font-medium text-indigo-400 uppercase tracking-widest mb-2">
                         Question
                     </span>
-                    <p className="text-xl text-white text-center leading-relaxed font-medium">
+                    {card.image_url && (
+                        <img
+                            src={card.image_url}
+                            alt=""
+                            className="w-full max-h-32 object-cover rounded-xl mb-3"
+                        />
+                    )}
+                    <p className={`text-white text-center leading-relaxed font-medium ${card.image_url ? 'text-base' : 'text-xl'}`}>
                         {card.question}
                     </p>
                     <div className="absolute bottom-4 flex items-center gap-1.5 text-slate-500 text-xs">
@@ -143,8 +150,8 @@ export default function Flashcard({ card, flipped, onFlip, onSave, onSpeak, spea
                         <button
                             onClick={(e) => handleSpeak(e, card.answer)}
                             className={`p-1.5 transition-colors ${speaking
-                                    ? 'text-violet-400 animate-pulse'
-                                    : 'text-slate-500 hover:text-violet-400'
+                                ? 'text-violet-400 animate-pulse'
+                                : 'text-slate-500 hover:text-violet-400'
                                 }`}
                             title="Read aloud"
                         >
