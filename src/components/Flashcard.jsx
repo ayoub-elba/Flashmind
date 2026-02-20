@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { RotateCcw, Pencil, Check, X } from 'lucide-react'
+import { RotateCcw, Pencil, Check, X, Volume2 } from 'lucide-react'
 
-export default function Flashcard({ card, flipped, onFlip, onSave }) {
+export default function Flashcard({ card, flipped, onFlip, onSave, onSpeak, speaking }) {
     const [editing, setEditing] = useState(false)
     const [editQuestion, setEditQuestion] = useState(card.question)
     const [editAnswer, setEditAnswer] = useState(card.answer)
@@ -34,6 +34,11 @@ export default function Flashcard({ card, flipped, onFlip, onSave }) {
             onSave?.(card.id, editQuestion.trim(), editAnswer.trim())
             setEditing(false)
         }
+    }
+
+    const handleSpeak = (e, text) => {
+        e.stopPropagation()
+        onSpeak?.(text)
     }
 
     if (editing) {
@@ -99,14 +104,26 @@ export default function Flashcard({ card, flipped, onFlip, onSave }) {
             >
                 {/* Front */}
                 <div className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-sm p-8 flex flex-col items-center justify-center">
-                    {/* Edit button */}
-                    <button
-                        onClick={startEdit}
-                        className="absolute top-3 right-3 p-1.5 text-slate-500 hover:text-indigo-400 transition-colors"
-                        title="Edit card"
-                    >
-                        <Pencil className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Top buttons */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                        <button
+                            onClick={(e) => handleSpeak(e, card.question)}
+                            className={`p-1.5 transition-colors ${speaking
+                                    ? 'text-indigo-400 animate-pulse'
+                                    : 'text-slate-500 hover:text-indigo-400'
+                                }`}
+                            title="Read aloud"
+                        >
+                            <Volume2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={startEdit}
+                            className="p-1.5 text-slate-500 hover:text-indigo-400 transition-colors"
+                            title="Edit card"
+                        >
+                            <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                     <span className="text-xs font-medium text-indigo-400 uppercase tracking-widest mb-4">
                         Question
                     </span>
@@ -121,14 +138,26 @@ export default function Flashcard({ card, flipped, onFlip, onSave }) {
 
                 {/* Back */}
                 <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 border border-indigo-500/20 backdrop-blur-sm p-8 flex flex-col items-center justify-center">
-                    {/* Edit button */}
-                    <button
-                        onClick={startEdit}
-                        className="absolute top-3 right-3 p-1.5 text-slate-500 hover:text-violet-400 transition-colors"
-                        title="Edit card"
-                    >
-                        <Pencil className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Top buttons */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                        <button
+                            onClick={(e) => handleSpeak(e, card.answer)}
+                            className={`p-1.5 transition-colors ${speaking
+                                    ? 'text-violet-400 animate-pulse'
+                                    : 'text-slate-500 hover:text-violet-400'
+                                }`}
+                            title="Read aloud"
+                        >
+                            <Volume2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={startEdit}
+                            className="p-1.5 text-slate-500 hover:text-violet-400 transition-colors"
+                            title="Edit card"
+                        >
+                            <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                     <span className="text-xs font-medium text-violet-400 uppercase tracking-widest mb-4">
                         Answer
                     </span>

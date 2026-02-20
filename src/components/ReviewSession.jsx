@@ -3,8 +3,9 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import { createFSRS, Rating, dbRowToCard, cardToDbRow, getUserSettings } from '../lib/fsrs'
+import { useTTS, getTTSSettings, saveTTSSettings } from '../lib/useTTS'
 import Flashcard from './Flashcard'
-import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Frown, Meh, Smile, Laugh, Trash2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Frown, Meh, Smile, Laugh, Trash2, Volume2, Settings } from 'lucide-react'
 
 export default function ReviewSession({ onBack }) {
     const { user } = useAuth()
@@ -16,6 +17,17 @@ export default function ReviewSession({ onBack }) {
     const [updating, setUpdating] = useState(false)
     const [sessionStats, setSessionStats] = useState({ reviewed: 0, total: 0 })
     const [scheduling, setScheduling] = useState(null)
+    const [showAudioSettings, setShowAudioSettings] = useState(false)
+    const [ttsRate, setTtsRate] = useState(1.0)
+    const [ttsAutoPlay, setTtsAutoPlay] = useState(false)
+    const { speak, stop, speaking, tryAutoPlay } = useTTS()
+
+    // Load TTS settings
+    useEffect(() => {
+        const s = getTTSSettings()
+        setTtsRate(s.rate)
+        setTtsAutoPlay(s.autoPlay)
+    }, [])
 
     const fetchDueCards = useCallback(async () => {
         if (!activeProject) return
@@ -63,6 +75,14 @@ export default function ReviewSession({ onBack }) {
             setScheduling(null)
         }
     }, [cards, currentIndex])
+
+    // Auto-play TTS when card changes
+    useEffect(() => {
+        if (cards.length > 0 && currentIndex < cards.length && !flipped) {
+            tryAutoPlay(cards[currentIndex].question)
+        }
+        return () => stop()
+    }, [currentIndex, cards.length])
 
     const handleDelete = async () => {
         if (updating) return
@@ -219,8 +239,60 @@ export default function ReviewSession({ onBack }) {
                 </span>
             </div>
 
+            {/* Audio Settings toggle */}
+            <div className="flex justify-end">
+                <button
+                    onClick={() => setShowAudioSettings(!showAudioSettings)}
+                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all ${showAudioSettings
+                            ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                            : 'text-slate-500 hover:text-slate-300'
+                        }`}
+                >
+                    <Volume2 className="w-3 h-3" />
+                    Audio
+                </button>
+            </div>
+
+            {/* Audio Settings Panel */}
+            {showAudioSettings && (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                        <label className="text-xs text-slate-400">Speed</label>
+                        <span className="text-xs font-mono text-indigo-400">{ttsRate.toFixed(1)}x</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="0.5"
+                        max="2.0"
+                        step="0.1"
+                        value={ttsRate}
+                        onChange={(e) => {
+                            const rate = parseFloat(e.target.value)
+                            setTtsRate(rate)
+                            saveTTSSettings({ rate, autoPlay: ttsAutoPlay })
+                        }}
+                        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                    />
+                    <div className="flex items-center justify-between pt-1">
+                        <label className="text-xs text-slate-400">Auto-play</label>
+                        <button
+                            onClick={() => {
+                                const newVal = !ttsAutoPlay
+                                setTtsAutoPlay(newVal)
+                                saveTTSSettings({ rate: ttsRate, autoPlay: newVal })
+                            }}
+                            className={`relative w-9 h-5 rounded-full transition-colors ${ttsAutoPlay ? 'bg-indigo-500' : 'bg-white/10'
+                                }`}
+                        >
+                            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${ttsAutoPlay ? 'translate-x-4' : ''
+                                }`} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Flashcard */}
-            <Flashcard card={card} flipped={flipped} onFlip={() => setFlipped(!flipped)} onSave={handleSaveCard} />
+            <Flashcard card={card} flipped={flipped} onFlip={() => setFlipped(!flipped)} onSave={handleSaveCard} onSpeak={speak} speaking={speaking} />
 
             {/* Delete button */}
             <div className="flex justify-center">
