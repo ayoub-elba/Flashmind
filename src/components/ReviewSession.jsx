@@ -32,8 +32,14 @@ export default function ReviewSession({ onBack }) {
             .order('due', { ascending: true })
 
         if (!error && data) {
+            // Fisher-Yates shuffle for random review order
+            const shuffled = [...data]
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+            }
             // Apply daily limit if set
-            const limited = settings.dailyLimit > 0 ? data.slice(0, settings.dailyLimit) : data
+            const limited = settings.dailyLimit > 0 ? shuffled.slice(0, settings.dailyLimit) : shuffled
             setCards(limited)
             setSessionStats((s) => ({ ...s, total: limited.length }))
         }
