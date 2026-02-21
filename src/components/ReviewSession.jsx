@@ -244,8 +244,8 @@ export default function ReviewSession({ onBack }) {
                 <button
                     onClick={() => setShowAudioSettings(!showAudioSettings)}
                     className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all ${showAudioSettings
-                            ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                            : 'text-slate-500 hover:text-slate-300'
+                        ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                        : 'text-slate-500 hover:text-slate-300'
                         }`}
                 >
                     <Volume2 className="w-3 h-3" />
@@ -320,7 +320,6 @@ export default function ReviewSession({ onBack }) {
                     >
                         <Frown className="w-6 h-6" />
                         <span className="text-xs font-medium">Again</span>
-                        <span className="text-[10px] text-red-400/60">{getIntervalLabel(Rating.Again)}</span>
                     </button>
                     <button
                         onClick={() => handleAnswer(Rating.Hard)}
@@ -329,7 +328,6 @@ export default function ReviewSession({ onBack }) {
                     >
                         <Meh className="w-6 h-6" />
                         <span className="text-xs font-medium">Hard</span>
-                        <span className="text-[10px] text-orange-400/60">{getIntervalLabel(Rating.Hard)}</span>
                     </button>
                     <button
                         onClick={() => handleAnswer(Rating.Good)}
@@ -338,7 +336,6 @@ export default function ReviewSession({ onBack }) {
                     >
                         <Smile className="w-6 h-6" />
                         <span className="text-xs font-medium">Good</span>
-                        <span className="text-[10px] text-emerald-400/60">{getIntervalLabel(Rating.Good)}</span>
                     </button>
                     <button
                         onClick={() => handleAnswer(Rating.Easy)}
@@ -347,7 +344,6 @@ export default function ReviewSession({ onBack }) {
                     >
                         <Laugh className="w-6 h-6" />
                         <span className="text-xs font-medium">Easy</span>
-                        <span className="text-[10px] text-sky-400/60">{getIntervalLabel(Rating.Easy)}</span>
                     </button>
                 </div>
             )}
