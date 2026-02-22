@@ -46,7 +46,8 @@ Voici la flashcard: "${question}"`
                     ],
                     generationConfig: {
                         temperature: 0.9,
-                        maxOutputTokens: 150,
+                        maxOutputTokens: 800,
+                        responseMimeType: "application/json"
                     }
                 })
             }
