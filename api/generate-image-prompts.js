@@ -60,7 +60,11 @@ Voici la flashcard: "${question}"`
         const data = await response.json()
 
         // Extract the text from Gemini response
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]'
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+
+        if (!text || text.trim() === '') {
+            return res.status(500).json({ error: 'Empty response from Gemini', rawData: data })
+        }
 
         // Parse JSON array from the response (handle markdown code blocks)
         let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
