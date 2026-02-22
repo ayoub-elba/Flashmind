@@ -63,11 +63,17 @@ Voici la flashcard: "${question}"`
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]'
 
         // Parse JSON array from the response (handle markdown code blocks)
-        const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-        const suggestions = JSON.parse(cleaned)
+        let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+
+        let suggestions;
+        try {
+            suggestions = JSON.parse(cleaned)
+        } catch (parseError) {
+            return res.status(500).json({ error: 'Failed to parse JSON', rawText: text, cleanedText: cleaned })
+        }
 
         return res.status(200).json({ suggestions })
     } catch (error) {
-        return res.status(500).json({ error: 'Failed to generate suggestions' })
+        return res.status(500).json({ error: 'Failed to generate suggestions', details: error.message, stack: error.stack })
     }
 }
