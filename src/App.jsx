@@ -3,6 +3,7 @@ import { ProjectProvider } from './contexts/ProjectContext'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import { Loader2, Brain, Clock, LogOut } from 'lucide-react'
+import { Toaster } from 'sonner'
 
 function PendingApproval() {
   const { user, signOut } = useAuth()
@@ -79,6 +80,18 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: 'rgba(15, 23, 42, 0.9)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: '#f1f5f9',
+            borderRadius: '12px',
+          },
+        }}
+      />
       <AppContent />
     </AuthProvider>
   )

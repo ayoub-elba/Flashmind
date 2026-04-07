@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useProject, PROJECT_COLORS } from '../contexts/ProjectContext'
 import { ChevronDown, Plus, Check, Trash2, Loader2, Pencil } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function ProjectSelector() {
     const {
@@ -85,7 +86,7 @@ export default function ProjectSelector() {
         e.preventDefault()
         e.stopPropagation()
         if (projects.length <= 1) {
-            alert('You need at least one project.')
+            toast.warning('You need at least one project.')
             return
         }
         closeAll()

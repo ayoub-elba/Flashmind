@@ -3,15 +3,20 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import { createEmptyCard, cardToDbRow } from '../lib/fsrs'
+import { useFlashcards } from '../hooks/useFlashcards'
+import { useQueryClient } from '@tanstack/react-query'
 import ImageSearchModal from './ImageSearchModal'
 import { Search, Trash2, ArrowLeft, Loader2, Plus, X, Check, Pencil, ImageIcon } from 'lucide-react'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 export default function CardManager({ onBack }) {
     const { user } = useAuth()
     const { activeProject } = useProject()
-    const [cards, setCards] = useState([])
-    const [loading, setLoading] = useState(true)
+    
+    const queryClient = useQueryClient()
+    const { data: cards = [], isLoading: loading } = useFlashcards()
+
     const [searchTerm, setSearchTerm] = useState('')
     const [deletingId, setDeletingId] = useState(null)
     const [showAddForm, setShowAddForm] = useState(false)
@@ -30,29 +35,30 @@ export default function CardManager({ onBack }) {
     const [editImageUrl, setEditImageUrl] = useState('')
     const [saving, setSaving] = useState(false)
 
-    useEffect(() => {
-        fetchCards()
-    }, [user.id])
+    // Infinite scroll
+    const [visibleCount, setVisibleCount] = useState(50)
+    const observerRef = useRef(null)
+    const sentinelRef = useRef(null)
 
+    // Reset when search changes
     useEffect(() => {
-        if (showAddForm && questionRef.current) {
-            questionRef.current.focus()
+        setVisibleCount(50)
+    }, [searchTerm])
+
+    // IntersectionObserver: load 50 more when sentinel comes into view
+    useEffect(() => {
+        if (observerRef.current) observerRef.current.disconnect()
+        observerRef.current = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                setVisibleCount((prev) => prev + 50)
+            }
+        }, { threshold: 0.1 })
+        if (sentinelRef.current) {
+            observerRef.current.observe(sentinelRef.current)
         }
-    }, [showAddForm])
+        return () => observerRef.current?.disconnect()
+    }, [searchTerm])
 
-    const fetchCards = async () => {
-        if (!activeProject) return
-        setLoading(true)
-        const { data } = await supabase
-            .from('flashcards')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('project_id', activeProject.id)
-            .order('created_at', { ascending: false })
-
-        if (data) setCards(data)
-        setLoading(false)
-    }
 
     const handleDelete = async (id) => {
         if (!confirm('Are you sure you want to delete this card?')) return
@@ -64,12 +70,19 @@ export default function CardManager({ onBack }) {
             .eq('id', id)
 
         if (!error) {
-            setCards(cards.filter((c) => c.id !== id))
+            queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })
+            toast.success('Card deleted successfully')
         } else {
-            alert('Failed to delete card')
+            toast.error('Failed to delete card')
         }
         setDeletingId(null)
     }
+
+    useEffect(() => {
+        if (showAddForm && questionRef.current) {
+            questionRef.current.focus()
+        }
+    }, [showAddForm])
 
     const handleAddCard = async () => {
         if (!newQuestion.trim() || !newAnswer.trim()) return
@@ -91,13 +104,14 @@ export default function CardManager({ onBack }) {
             .select()
 
         if (!error && data) {
-            setCards([data[0], ...cards])
+            queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })
             setNewQuestion('')
             setNewAnswer('')
             setNewImageUrl('')
             setShowAddForm(false)
+            toast.success('Card added!')
         } else {
-            alert('Failed to add card')
+            toast.error('Failed to add card')
         }
         setAdding(false)
     }
@@ -130,14 +144,11 @@ export default function CardManager({ onBack }) {
             .eq('id', editingId)
 
         if (!error) {
-            setCards(cards.map((c) =>
-                c.id === editingId
-                    ? { ...c, question: editQuestion.trim(), answer: editAnswer.trim(), image_url: editImageUrl || null }
-                    : c
-            ))
+            queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })
             handleCancelEdit()
+            toast.success('Card saved!')
         } else {
-            alert('Failed to save card')
+            toast.error('Failed to save card')
         }
         setSaving(false)
     }
@@ -149,6 +160,9 @@ export default function CardManager({ onBack }) {
             card.answer.toLowerCase().includes(lowerSearch)
         )
     })
+
+    const visibleCards = filteredCards.slice(0, visibleCount)
+    const hasMore = visibleCount < filteredCards.length
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -274,7 +288,7 @@ export default function CardManager({ onBack }) {
                             <div className="col-span-5">Answer</div>
                             <div className="col-span-2 text-right">Actions</div>
                         </div>
-                        {filteredCards.map((card) =>
+                        {visibleCards.map((card) =>
                             editingId === card.id ? (
                                 <div key={card.id} className="px-6 py-4 bg-indigo-500/5">
                                     <div className="space-y-3">
@@ -378,6 +392,13 @@ export default function CardManager({ onBack }) {
                                     </div>
                                 </div>
                             )
+                        )}
+                        {/* Sentinel for IntersectionObserver */}
+                        {hasMore && (
+                            <div ref={sentinelRef} className="flex items-center justify-center py-6 text-slate-500">
+                                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                <span className="text-sm">Loading more cards...</span>
+                            </div>
                         )}
                     </div>
                 )}

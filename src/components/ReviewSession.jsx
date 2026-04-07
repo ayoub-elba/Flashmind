@@ -6,10 +6,14 @@ import { createFSRS, Rating, dbRowToCard, cardToDbRow, getUserSettings } from '.
 import { useTTS, getTTSSettings, saveTTSSettings } from '../lib/useTTS'
 import Flashcard from './Flashcard'
 import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Frown, Meh, Smile, Laugh, Trash2, Volume2, Settings } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 export default function ReviewSession({ onBack }) {
     const { user } = useAuth()
     const { activeProject } = useProject()
+    
+    const queryClient = useQueryClient()
     const [cards, setCards] = useState([])
     const [currentIndex, setCurrentIndex] = useState(0)
     const [flipped, setFlipped] = useState(false)
@@ -95,13 +99,15 @@ export default function ReviewSession({ onBack }) {
             .eq('id', card.id)
 
         if (!error) {
+            queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })
             const newCards = [...cards]
             newCards.splice(currentIndex, 1)
             setCards(newCards)
             setFlipped(false)
             setUpdating(false)
+            toast.success('Card deleted')
         } else {
-            alert('Failed to delete card')
+            toast.error('Failed to delete card')
             setUpdating(false)
         }
     }
@@ -113,6 +119,7 @@ export default function ReviewSession({ onBack }) {
             .eq('id', cardId)
 
         if (!error) {
+            queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })
             // Update local state
             const newCards = [...cards]
             const idx = newCards.findIndex((c) => c.id === cardId)
@@ -120,8 +127,9 @@ export default function ReviewSession({ onBack }) {
                 newCards[idx] = { ...newCards[idx], question: newQuestion, answer: newAnswer }
                 setCards(newCards)
             }
+            toast.success('Changes saved!')
         } else {
-            alert('Failed to save changes')
+            toast.error('Failed to save changes')
         }
     }
 
@@ -139,6 +147,8 @@ export default function ReviewSession({ onBack }) {
             .update(dbFields)
             .eq('id', card.id)
 
+        queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })
+        
         setSessionStats((s) => ({ ...s, reviewed: s.reviewed + 1 }))
         setFlipped(false)
 

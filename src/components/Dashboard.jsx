@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
+import { useFlashcards } from '../hooks/useFlashcards'
+import { useQueryClient } from '@tanstack/react-query'
 import CSVUploader from './CSVUploader'
 import ReviewSession from './ReviewSession'
 import CardManager from './CardManager'
@@ -16,6 +18,7 @@ import {
     Gauge, X, Pencil, TrendingUp, BookOpen, AlertTriangle,
     Check, Loader2, Settings as SettingsIcon,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { addDays, format, startOfDay } from 'date-fns'
 
 // ─────────────────────────────────────────
@@ -67,9 +70,11 @@ const USE_MOCK = false
 export default function Dashboard() {
     const { user, signOut } = useAuth()
     const { activeProject, loading: projectLoading } = useProject()
-    const [cards, setCards] = useState([])
+    
+    const queryClient = useQueryClient()
+    const { data: cards = [], isLoading: loading } = useFlashcards()
+    
     const [view, setView] = useState('home')
-    const [loading, setLoading] = useState(true)
 
     // Per-card inline editing for leeches
     const [editingLeechId, setEditingLeechId] = useState(null)
@@ -77,23 +82,6 @@ export default function Dashboard() {
     const [editAnswer, setEditAnswer] = useState('')
     const [savingLeech, setSavingLeech] = useState(false)
 
-    const fetchCards = async () => {
-        if (!activeProject) return
-        setLoading(true)
-        if (USE_MOCK) {
-            setCards(generateMockCards(120))
-            setLoading(false)
-            return
-        }
-        const { data } = await supabase
-            .from('flashcards')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('project_id', activeProject.id)
-
-        if (data) setCards(data)
-        setLoading(false)
-    }
 
     const handleStartEditLeech = (card) => {
         setEditingLeechId(card.id)
@@ -117,21 +105,14 @@ export default function Dashboard() {
             .eq('id', editingLeechId)
 
         if (!error) {
-            setCards(cards.map((c) =>
-                c.id === editingLeechId
-                    ? { ...c, question: editQuestion.trim(), answer: editAnswer.trim() }
-                    : c
-            ))
+            queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })
             handleCancelEditLeech()
+            toast.success('Card updated!')
         } else {
-            alert('Failed to save card')
+            toast.error('Failed to save card')
         }
         setSavingLeech(false)
     }
-
-    useEffect(() => {
-        fetchCards()
-    }, [user.id, activeProject?.id])
 
     // ── Derived stats ──
     const now = new Date()
@@ -181,7 +162,7 @@ export default function Dashboard() {
     if (view === 'review') {
         return (
             <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
-                <ReviewSession onBack={() => { setView('home'); fetchCards() }} />
+                <ReviewSession onBack={() => { setView('home') }} />
             </Layout>
         )
     }
@@ -189,7 +170,7 @@ export default function Dashboard() {
     if (view === 'cards') {
         return (
             <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
-                <CardManager onBack={() => { setView('home'); fetchCards() }} />
+                <CardManager onBack={() => { setView('home') }} />
             </Layout>
         )
     }
@@ -204,7 +185,7 @@ export default function Dashboard() {
                             <X className="w-5 h-5" />
                         </button>
                     </div>
-                    <CSVUploader projectId={activeProject?.id} onUploadComplete={() => fetchCards()} />
+                    <CSVUploader projectId={activeProject?.id} onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['flashcards', user.id, activeProject.id] })} />
                 </div>
             </Layout>
         )
