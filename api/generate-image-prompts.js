@@ -1,5 +1,6 @@
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*')
+    const allowedOrigin = process.env.ALLOWED_ORIGIN || '*'
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
@@ -8,8 +9,15 @@ export default async function handler(req, res) {
 
     const { question } = req.body || {}
 
-    if (!question) {
-        return res.status(400).json({ error: 'Missing "question" in body' })
+    if (!question || typeof question !== 'string') {
+        return res.status(400).json({ error: 'Missing or invalid "question" in body' })
+    }
+
+    // Security: Limit input length and strip special characters to prevent prompt injection
+    const sanitizedQuestion = question.substring(0, 500).replace(/[^\w\s\u00C0-\u017F.,!?'-]/gi, '')
+
+    if (!sanitizedQuestion.trim()) {
+        return res.status(400).json({ error: 'Invalid "question" content' })
     }
 
     const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
@@ -39,7 +47,7 @@ Terme 4 : Une émotion ou une ambiance (ex: "Dark moody").
 Renvoie UNIQUEMENT un tableau JSON de chaînes de caractères, sans aucun texte supplémentaire.
 Exemple: ["Freedom", "Flying Bird", "Open Chain", "Blue Sky"]
 
-Voici la flashcard: "${question}"`
+Voici la flashcard: "${sanitizedQuestion}"`
                                 }
                             ]
                         }
@@ -64,7 +72,8 @@ Voici la flashcard: "${question}"`
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text
 
         if (!text || text.trim() === '') {
-            return res.status(500).json({ error: 'Empty response from Gemini', rawData: data })
+            console.error('Empty response from Gemini:', data)
+            return res.status(500).json({ error: 'Internal Server Error' })
         }
 
         // Parse JSON array from the response (handle markdown code blocks)
@@ -74,11 +83,13 @@ Voici la flashcard: "${question}"`
         try {
             suggestions = JSON.parse(cleaned)
         } catch (parseError) {
-            return res.status(500).json({ error: 'Failed to parse JSON', rawText: text, cleanedText: cleaned })
+            console.error('Failed to parse JSON:', cleaned)
+            return res.status(500).json({ error: 'Internal Server Error' })
         }
 
         return res.status(200).json({ suggestions })
     } catch (error) {
-        return res.status(500).json({ error: 'Failed to generate suggestions', details: error.message, stack: error.stack })
+        console.error('Gemini API Error:', error)
+        return res.status(500).json({ error: 'Internal Server Error' })
     }
 }
