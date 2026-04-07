@@ -221,12 +221,13 @@ export default function Dashboard() {
     // ── Main Dashboard ──
     return (
         <Layout user={user} signOut={signOut} onSettings={() => setView('settings')}>
-            <div className="max-w-6xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold text-white">Dashboard</h2>
-                        <p className="text-slate-400 text-sm mt-1">
+                        <h2 className="text-3xl font-extrabold text-white tracking-tight">Dashboard</h2>
+                        <p className="text-slate-400 text-sm mt-1.5 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                             {cards.length} cards in your collection
                         </p>
                     </div>
@@ -288,12 +289,14 @@ export default function Dashboard() {
                 </div>
 
                 {/* Charts row */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     {/* Bar Chart — 14 day forecast (2/3 width) */}
-                    <div className="lg:col-span-2 rounded-2xl bg-white/[0.03] border border-white/10 p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                            <BookOpen className="w-4 h-4 text-indigo-400" />
-                            <h3 className="text-sm font-semibold text-white">14-Day Review Forecast</h3>
+                    <div className="lg:col-span-2 rounded-2xl glass-panel p-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="p-1.5 rounded-md bg-indigo-500/10">
+                                <BookOpen className="w-4 h-4 text-indigo-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white tracking-wide">14-Day Review Forecast</h3>
                         </div>
                         {cards.length === 0 ? (
                             <div className="flex items-center justify-center h-[220px] text-slate-500 text-sm">
@@ -342,10 +345,12 @@ export default function Dashboard() {
                     </div>
 
                     {/* Pie Chart — State distribution (1/3 width) */}
-                    <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Zap className="w-4 h-4 text-violet-400" />
-                            <h3 className="text-sm font-semibold text-white">Card States</h3>
+                    <div className="rounded-2xl glass-panel p-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="p-1.5 rounded-md bg-violet-500/10">
+                                <Zap className="w-4 h-4 text-violet-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white tracking-wide">Card States</h3>
                         </div>
                         {stateDistribution.length === 0 ? (
                             <div className="flex items-center justify-center h-[220px] text-slate-500 text-sm">
@@ -408,11 +413,13 @@ export default function Dashboard() {
 
                 {/* Leech table — Top 10 hardest cards */}
                 {leeches.length > 0 && (
-                    <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                            <AlertTriangle className="w-4 h-4 text-amber-400" />
-                            <h3 className="text-sm font-semibold text-white">Hardest Cards (Leeches)</h3>
-                            <span className="text-xs text-slate-500 ml-auto">Top 10 by difficulty</span>
+                    <div className="rounded-2xl glass-panel p-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="p-1.5 rounded-md bg-amber-500/10">
+                                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white tracking-wide">Hardest Cards (Leeches)</h3>
+                            <span className="text-xs font-medium text-slate-500 ml-auto bg-slate-800/50 px-2 py-1 rounded">Top 10 by difficulty</span>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -548,14 +555,14 @@ function KPICard({ icon, label, value, accent, highlight, subtitle }) {
     const a = accentMap[accent] || accentMap.indigo
 
     return (
-        <div className={`rounded-2xl bg-gradient-to-br ${a.bg} border ${a.border} p-5 transition-all`}>
+        <div className={`glass-panel rounded-2xl bg-gradient-to-br ${a.bg} border ${a.border} p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:bg-white/[0.04]`}>
             <div className="flex items-center gap-2.5 mb-3">
-                <div className={`w-8 h-8 rounded-lg ${a.icon} flex items-center justify-center`}>
+                <div className={`w-8 h-8 rounded-lg ${a.icon} flex items-center justify-center shadow-inner`}>
                     {icon}
                 </div>
-                <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">{label}</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
             </div>
-            <p className={`text-3xl font-bold ${a.value}`}>{value}</p>
+            <p className={`text-3xl font-bold ${a.value} tracking-tight`}>{value}</p>
             {subtitle && (
                 <p className="text-[11px] text-slate-500 mt-1">{subtitle}</p>
             )}
@@ -593,15 +600,16 @@ function StateBadge({ state }) {
 
 function Layout({ children, user, signOut, onSettings }) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
-            {/* Background blurs */}
+        <div className="min-h-screen bg-[#0B0F19] text-slate-200">
+            {/* Premium Background Gradient */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-violet-500/5 rounded-full blur-3xl"></div>
+                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[120px]"></div>
+                <div className="absolute top-[40%] left-[20%] w-[300px] h-[300px] bg-sky-500/5 rounded-full blur-[100px]"></div>
             </div>
 
             {/* Nav */}
-            <nav className="relative z-30 border-b border-white/5 bg-white/5 backdrop-blur-xl">
+            <nav className="relative z-30 glass-panel border-b-0 border-white/[0.05] sticky top-0">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
