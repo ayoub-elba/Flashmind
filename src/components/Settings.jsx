@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getUserSettings, saveUserSettings } from '../lib/fsrs'
 import {
     ArrowLeft, Mail, Lock, Loader2, Check, AlertCircle,
-    Download, Trash2, Target, ListOrdered,
+    Trash2, Target, ListOrdered,
 } from 'lucide-react'
 
 export default function Settings({ onBack }) {
@@ -26,8 +26,6 @@ export default function Settings({ onBack }) {
     const [dailyLimit, setDailyLimit] = useState(0)
     const [settingsSaved, setSettingsSaved] = useState(false)
 
-    // Export
-    const [exporting, setExporting] = useState(false)
 
     // Delete
     const [deleting, setDeleting] = useState(false)
@@ -92,44 +90,6 @@ export default function Settings({ onBack }) {
         saveUserSettings({ retentionRate, dailyLimit })
         setSettingsSaved(true)
         setTimeout(() => setSettingsSaved(false), 2000)
-    }
-
-    // ── Export Data ──
-    const handleExport = async () => {
-        setExporting(true)
-        const { data, error } = await supabase
-            .from('flashcards')
-            .select('question, answer, state, stability, difficulty, reps, lapses, due, created_at')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: true })
-
-        if (error || !data) {
-            alert('Export failed: ' + (error?.message || 'Unknown error'))
-            setExporting(false)
-            return
-        }
-
-        // Convert to CSV
-        const headers = ['question', 'answer', 'state', 'stability', 'difficulty', 'reps', 'lapses', 'due', 'created_at']
-        const csvRows = [headers.join(',')]
-        data.forEach((row) => {
-            const values = headers.map((h) => {
-                const val = String(row[h] ?? '').replace(/"/g, '""')
-                return `"${val}"`
-            })
-            csvRows.push(values.join(','))
-        })
-        const csvContent = csvRows.join('\n')
-
-        // Download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `flashmind_export_${new Date().toISOString().slice(0, 10)}.csv`
-        a.click()
-        URL.revokeObjectURL(url)
-        setExporting(false)
     }
 
     // ── Delete Account ──
@@ -322,25 +282,6 @@ export default function Settings({ onBack }) {
                         Update Password
                     </button>
                 </form>
-            </div>
-
-            {/* ── Export Data ── */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                    <Download className="w-4 h-4 text-indigo-400" />
-                    <h3 className="text-sm font-medium text-white">Export Data</h3>
-                </div>
-                <p className="text-xs text-slate-400 mb-3">
-                    Download all your flashcards as a CSV file. Includes questions, answers, and review statistics.
-                </p>
-                <button
-                    onClick={handleExport}
-                    disabled={exporting}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-white bg-white/5 border border-white/10 hover:bg-white/10 rounded-lg transition-all disabled:opacity-40"
-                >
-                    {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    {exporting ? 'Exporting...' : 'Download CSV'}
-                </button>
             </div>
 
             {/* ── Delete Account ── */}
